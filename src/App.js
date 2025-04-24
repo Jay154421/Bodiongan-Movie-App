@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import "./App.css";
 import { createClient } from "@supabase/supabase-js";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
+
+import Header from "./components/Header";
 import SearchBar from "./components/SearchBar";
 import MovieCard from "./components/MovieCard";
-import Header from "./components/Header";
+
+import { useSearch } from "./components/SearchContext";
 
 const supabase = createClient(
   "https://zlekvshwkmdqpfikkfos.supabase.co",
@@ -13,11 +17,18 @@ const supabase = createClient(
 
 function App() {
   const [session, setSession] = useState(null);
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalResults, setTotalResults] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+  const {
+    searchQuery,
+    searchMovies,
+    movies,
+    loading,
+    currentPage,
+    setCurrentPage,
+    totalResults,
+  } = useSearch();
+
+  console.log("See:", searchQuery);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -25,102 +36,87 @@ function App() {
         data: { session },
       } = await supabase.auth.getSession();
       setSession(session);
-      setLoading(false);
+      setAuthLoading(false);
 
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
       });
-
-      return () => subscription.unsubscribe();
     };
 
     checkSession();
   }, []);
 
-  const searchMovies = async (query, page = 1) => {
-    const API_KEY = "7118e59c";
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `https://www.omdbapi.com/?s=${query}&page=${page}&apikey=${API_KEY}`
-      );
-      const data = await response.json();
-
-      if (data.Response === "True") {
-        // Fetch full details for each movie
-        const moviesWithDetails = await Promise.all(
-          data.Search.map(async (movie) => {
-            const detailRes = await fetch(
-              `https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${API_KEY}`
-            );
-            const detailData = await detailRes.json();
-            return detailData;
-          })
-        );
-
-        setMovies(moviesWithDetails);
-        setTotalResults(parseInt(data.totalResults, 10));
-        setSearchQuery(query);
-        setCurrentPage(page);
-      } else {
-        setMovies([]);
-        setTotalResults(0);
-      }
-    } catch (error) {
-      console.error("Error fetching movies:", error);
-      setMovies([]);
-      setTotalResults(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveToFavorites = async (movie) => {
+  const saveToFavorites = (movie) => {
     if (!session) return;
 
     try {
-      const { error } = await supabase.from("favorites").insert([
-        {
-          movie_id: movie.imdbID,
-          title: movie.Title,
-          poster: movie.Poster,
-          year: movie.Year,
-          type: movie.Type,
-          user_id: session.user.id,
-        },
-      ]);
+      // Create a user-specific key for localStorage
+      const userKey = `favorites_${session.user.id}`;
 
-      if (error) {
-        console.error("Error saving favorite:", error);
-        alert(`Error: ${error.message}`);
-      } else {
-        alert(`${movie.Title} added to favorites!`);
+      // Get existing favorites for this user
+      const favorites = JSON.parse(localStorage.getItem(userKey)) || [];
+
+      // Check if movie already exists
+      const exists = favorites.some((fav) => fav.imdbID === movie.imdbID);
+
+      if (exists) {
+        alert(`${movie.Title} is already in your favorites!`);
+        return;
       }
+
+      // Add new movie to favorites
+      const updatedFavorites = [...favorites, movie];
+
+      // Save back to localStorage
+      localStorage.setItem(userKey, JSON.stringify(updatedFavorites));
+      alert(`${movie.Title} added to favorites!`);
     } catch (error) {
-      console.error("Error saving favorite:", error);
       alert("An error occurred while saving to favorites");
     }
   };
 
-  if (loading) {
+  const handlePagination = (direction) => {
+    const nextPage = direction === "next" ? currentPage + 1 : currentPage - 1;
+    setCurrentPage(nextPage);
+    searchMovies(searchQuery, nextPage);
+  };
+
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="text-xl animate-pulse">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black text-white px-4 font-sans">
+        <Header onSignOut={() => supabase.auth.signOut()} />
+        <div className="bg-[#FF5733] flex w-full mb-8 rounded-lg shadow-md p-2">
+          <SearchBar />
+        </div>
+        <div className="flex items-center justify-center mt-28">
+          <span className="loader"></span>
+        </div>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black p-4 text-white">
-        <div className="bg-zinc-900 p-8 rounded-xl shadow-xl w-full max-w-md">
-          <h1 className="text-3xl font-bold mb-6 text-center">🎬 Movie App</h1>
+      <div className="min-h-screen flex items-center justify-center bg-black p-4 ">
+        <div className="bg-[#292929] p-8 rounded-xl shadow-xl w-full max-w-md border  border-[#FF5733]">
+          <h1 className="text-3xl font-bold mb-6 text-center text-[#FF5733]">
+            🎬 Movie App
+          </h1>
           <Auth
             supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            providers={["google", "github"]}
+            appearance={{
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    brand: "#00BFFF",
+                    brandAccent: "#009acd",
+                  },
+                },
+              },
+            }}
+            providers={[]}
+            theme="dark"
           />
         </div>
       </div>
@@ -128,68 +124,70 @@ function App() {
   }
 
   return (
-    <>
-      <div className="min-h-screen bg-black text-white p-4 font-sans">
-        <Header />
-
-        <div className="bg-red-800 flex w-full mb-8 ">
-          <SearchBar onSearch={(query) => searchMovies(query, 1)} />
-        </div>
-        <div className="max-w-7xl mx-auto">
-          {movies.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {movies.map((movie) => (
-                  <MovieCard
-                    key={movie.imdbID}
-                    movie={movie}
-                    onSave={saveToFavorites}
-                  />
-                ))}
-              </div>
-
-              {totalResults > 10 && (
-                <div className="flex justify-center mt-8 gap-6 items-center">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => searchMovies(searchQuery, currentPage - 1)}
-                    className={`px-4 py-2 rounded-full font-semibold ${
-                      currentPage === 1
-                        ? "bg-zinc-700 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-black hover:bg-gray-200 transition"
-                    }`}
-                  >
-                    ◀ Prev
-                  </button>
-
-                  <span className="text-lg tracking-wide">
-                    Page {currentPage} / {Math.ceil(totalResults / 10)}
-                  </span>
-
-                  <button
-                    disabled={currentPage === Math.ceil(totalResults / 10)}
-                    onClick={() => searchMovies(searchQuery, currentPage + 1)}
-                    className={`px-4 py-2 rounded-full font-semibold ${
-                      currentPage === Math.ceil(totalResults / 10)
-                        ? "bg-zinc-700 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-black hover:bg-gray-200 transition"
-                    }`}
-                  >
-                    Next ▶
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16 text-gray-400">
-              {searchQuery === ""
-                ? "Search for a movie to begin..."
-                : "No movies found. Try a different title."}
-            </div>
-          )}
+    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black text-white px-4 font-sans">
+      <div className="pt-6">
+        <Header onSignOut={() => supabase.auth.signOut()} />
+        <div className="bg-[#FF5733] flex w-full mb-8 rounded-lg shadow-md p-2">
+          <SearchBar />
         </div>
       </div>
-    </>
+
+      <div className="max-w-7xl mx-auto">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <span className="loader"></span>
+          </div>
+        ) : searchQuery.trim() !== "" ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {movies.map((movie) => (
+                <MovieCard
+                  key={movie.imdbID}
+                  movie={movie}
+                  onSave={saveToFavorites}
+                />
+              ))}
+            </div>
+
+            {totalResults > 20 && (
+              <div className="flex justify-center mt-8 gap-6 items-center">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => handlePagination("prev")}
+                  className={`px-4 py-2 rounded-full font-semibold ${
+                    currentPage === 1
+                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                      : "bg-[#00BFFF] text-white hover:bg-[#009acd] transition"
+                  }`}
+                >
+                  ◀ Prev
+                </button>
+
+                <span className="text-lg tracking-wide">
+                  Page {currentPage} / {Math.ceil(totalResults / 20)}
+                </span>
+
+                <button
+                  disabled={currentPage === Math.ceil(totalResults / 20)}
+                  onClick={() => handlePagination("next")}
+                  className={`px-4 py-2 rounded-full font-semibold ${
+                    currentPage === Math.ceil(totalResults / 20)
+                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                      : "bg-[#00BFFF] text-white hover:bg-[#009acd] transition"
+                  }`}
+                >
+                  Next ▶
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-16 text-gray-400">
+            Welcome to our movie collection! Search for a movie above.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
