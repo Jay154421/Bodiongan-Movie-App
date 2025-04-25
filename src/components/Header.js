@@ -12,24 +12,24 @@ function Header({ onSignOut, session }) {
       const watchedKey = `watched_${session.user.id}`;
       const storedFavorites = JSON.parse(localStorage.getItem(favKey)) || [];
       const storedWatched = JSON.parse(localStorage.getItem(watchedKey)) || [];
-      
-      const enhancedFavorites = storedFavorites.map(movie => {
+
+      const enhancedFavorites = storedFavorites.map((movie) => {
         const ratingsKey = `ratings_${movie.imdbID}`;
         const ratings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
-        const userRating = ratings.find(r => r.userId === session.user.id);
+        const userRating = ratings.find((r) => r.userId === session.user.id);
         return {
           ...movie,
-          userRating: userRating ? userRating.rating : 0
+          userRating: userRating ? userRating.rating : 0,
         };
       });
-      
-      const enhancedWatched = storedWatched.map(movie => {
+
+      const enhancedWatched = storedWatched.map((movie) => {
         const ratingsKey = `ratings_${movie.imdbID}`;
         const ratings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
-        const userRating = ratings.find(r => r.userId === session.user.id);
+        const userRating = ratings.find((r) => r.userId === session.user.id);
         return {
           ...movie,
-          userRating: userRating ? userRating.rating : 0
+          userRating: userRating ? userRating.rating : 0,
         };
       });
 
@@ -58,14 +58,14 @@ function Header({ onSignOut, session }) {
 
   return (
     <>
-      <header className="bg-gradient-to-r from-black to-zinc-900 py-4 px-6 shadow-lg">
+      <header className="bg-gradient-to-r from-black to-zinc-900 rounded-md text-sm font-medium transition-all border border-gray-700 py-4 px-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center">
             <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#00BFFF] to-[#FF5733] bg-clip-text text-transparent">
               Watchly
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsModalOpen(true)}
@@ -87,7 +87,9 @@ function Header({ onSignOut, session }) {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 backdrop-blur-sm">
           <div className="bg-zinc-900 p-6 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-700">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Your Movie Lists</h2>
+              <h2 className="text-2xl font-bold text-white">
+                Your Movie Lists
+              </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-white text-3xl"
@@ -170,7 +172,9 @@ function Header({ onSignOut, session }) {
                         )}
                       </div>
                       <button
-                        onClick={() => removeFromList(movie.imdbID, "favorites")}
+                        onClick={() =>
+                          removeFromList(movie.imdbID, "favorites")
+                        }
                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                       >
                         ×

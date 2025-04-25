@@ -137,9 +137,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black text-white px-4 font-sans">
-      <div className="pt-6">
+      <div className="pt-4">
         <Header onSignOut={() => supabase.auth.signOut()} session={session} />
-        <div className="bg-zinc-800/50 backdrop-blur-md flex w-full mt-4 mb-8 rounded-lg shadow-md p-2">
+        <div className="bg-zinc-800/50 rounded-md text-sm font-medium transition-all border border-gray-700 backdrop-blur-md flex w-full mt-4 mb-8 rounded-lg shadow-md p-2">
           <SearchBar />
         </div>
       </div>
