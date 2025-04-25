@@ -15,12 +15,7 @@ const SearchBar = () => {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 m-6 w-full flex-col">
-      <div className="flex flex-col mb-4">
-        <h2 className="text-5xl font-bold">Welcome.</h2>
-        <h3 className="text-3xl font-semibold">
-          Millions of movies to explore.
-        </h3>
-      </div>
+
       <div className="flex gap-2 items-center w-full">
         <input
           type="text"

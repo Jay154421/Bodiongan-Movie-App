@@ -12,8 +12,29 @@ function Header({ onSignOut, session }) {
       const watchedKey = `watched_${session.user.id}`;
       const storedFavorites = JSON.parse(localStorage.getItem(favKey)) || [];
       const storedWatched = JSON.parse(localStorage.getItem(watchedKey)) || [];
-      setFavorites(storedFavorites);
-      setWatched(storedWatched);
+      
+      const enhancedFavorites = storedFavorites.map(movie => {
+        const ratingsKey = `ratings_${movie.imdbID}`;
+        const ratings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
+        const userRating = ratings.find(r => r.userId === session.user.id);
+        return {
+          ...movie,
+          userRating: userRating ? userRating.rating : 0
+        };
+      });
+      
+      const enhancedWatched = storedWatched.map(movie => {
+        const ratingsKey = `ratings_${movie.imdbID}`;
+        const ratings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
+        const userRating = ratings.find(r => r.userId === session.user.id);
+        return {
+          ...movie,
+          userRating: userRating ? userRating.rating : 0
+        };
+      });
+
+      setFavorites(enhancedFavorites);
+      setWatched(enhancedWatched);
     }
   }, [isModalOpen, session]);
 
@@ -66,9 +87,7 @@ function Header({ onSignOut, session }) {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 backdrop-blur-sm">
           <div className="bg-zinc-900 p-6 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-700">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">
-                Your Movie Lists
-              </h2>
+              <h2 className="text-2xl font-bold text-white">Your Movie Lists</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-white text-3xl"
@@ -107,9 +126,7 @@ function Header({ onSignOut, session }) {
             ) : activeTab === "favorites" ? (
               favorites.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-400 text-xl mb-4">
-                    No favorites yet
-                  </p>
+                  <p className="text-gray-400 text-xl mb-4">No favorites yet</p>
                   <p className="text-gray-500">
                     Save some movies to see them here!
                   </p>
@@ -135,6 +152,22 @@ function Header({ onSignOut, session }) {
                           {movie.Title}
                         </h3>
                         <p className="text-xs text-gray-400">{movie.Year}</p>
+                        {movie.userRating > 0 && (
+                          <div className="flex mt-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span
+                                key={star}
+                                className={`text-xs ${
+                                  star <= movie.userRating
+                                    ? "text-yellow-400"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => removeFromList(movie.imdbID, "favorites")}
@@ -176,6 +209,22 @@ function Header({ onSignOut, session }) {
                         {movie.Title}
                       </h3>
                       <p className="text-xs text-gray-400">{movie.Year}</p>
+                      {movie.userRating > 0 && (
+                        <div className="flex mt-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className={`text-xs ${
+                                star <= movie.userRating
+                                  ? "text-yellow-400"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => removeFromList(movie.imdbID, "watched")}

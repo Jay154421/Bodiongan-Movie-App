@@ -151,7 +151,6 @@ function App() {
           </div>
         ) : searchQuery.trim() !== "" ? (
           <>
-            {/* Movie Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {movies.map((movie) => (
                 <MovieCard
@@ -164,7 +163,6 @@ function App() {
               ))}
             </div>
 
-            {/* New Pagination Design */}
             {totalResults > 20 && (
               <div className="mt-12 flex flex-col items-center">
                 <div className="flex items-center gap-1 mb-4">
