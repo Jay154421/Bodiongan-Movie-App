@@ -17,17 +17,17 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
   useEffect(() => {
     const fetchTrailer = async () => {
       if (!showDetails) return;
-
+      
       setTrailerLoading(true);
       try {
-        const API_KEY = "AIzaSyDwsJMC7Ne_padF3YzBuqMObtW783-9Pg0";
+        const API_KEY = "AIzaSyBoTkWNeZzdjPLZIRLTDCqrMAhHeHvlduk";
         const response = await fetch(
           `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
             `${movie.Title} ${movie.Year} official trailer`
           )}&maxResults=1&key=${API_KEY}`
         );
         const data = await response.json();
-
+        
         if (data.items && data.items.length > 0) {
           const videoId = data.items[0].id.videoId;
           setTrailerUrl(`https://www.youtube.com/embed/${videoId}`);
@@ -45,10 +45,8 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
       const ratingsKey = `ratings_${movie.imdbID}`;
       const savedRatings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
       setUserRatings(savedRatings);
-
-      const userRatingObj = savedRatings.find(
-        (r) => r.userId === session.user.id
-      );
+      
+      const userRatingObj = savedRatings.find(r => r.userId === session.user.id);
       if (userRatingObj) {
         setUserRating(userRatingObj.rating);
         setUserReview(userRatingObj.review || "");
@@ -65,18 +63,20 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
     try {
       const ratingsKey = `ratings_${movie.imdbID}`;
       const newRating = {
+        id: Date.now().toString(),
         userId: session.user.id,
         userName: session.user.email,
         rating: userRating,
         review: userReview,
         date: new Date().toISOString(),
+        upvotes: 0,
+        downvotes: 0
       };
 
-      const existingRatings =
-        JSON.parse(localStorage.getItem(ratingsKey)) || [];
+      const existingRatings = JSON.parse(localStorage.getItem(ratingsKey)) || [];
       const updatedRatings = [
-        ...existingRatings.filter((r) => r.userId !== session.user.id),
-        newRating,
+        ...existingRatings.filter(r => r.userId !== session.user.id),
+        newRating
       ];
 
       localStorage.setItem(ratingsKey, JSON.stringify(updatedRatings));
@@ -94,10 +94,8 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
 
     try {
       const ratingsKey = `ratings_${movie.imdbID}`;
-      const updatedRatings = userRatings.filter(
-        (r) => r.userId !== session.user.id
-      );
-
+      const updatedRatings = userRatings.filter(r => r.userId !== session.user.id);
+      
       localStorage.setItem(ratingsKey, JSON.stringify(updatedRatings));
       setUserRatings(updatedRatings);
       setUserRating(0);
@@ -110,12 +108,57 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
     }
   };
 
-  const averageRating =
-    userRatings.length > 0
-      ? userRatings.reduce((sum, r) => sum + r.rating, 0) / userRatings.length
-      : 0;
+  const handleVote = (reviewId, voteType) => {
+    if (!session) return;
 
-  const userHasRated = userRatings.some((r) => r.userId === session?.user.id);
+    try {
+      const ratingsKey = `ratings_${movie.imdbID}`;
+      const updatedRatings = [...userRatings];
+      const reviewIndex = updatedRatings.findIndex(r => r.id === reviewId);
+      
+      if (reviewIndex === -1) return;
+
+      const voteKey = `votes_${session.user.id}_${reviewId}`;
+      const existingVote = localStorage.getItem(voteKey);
+
+      // Remove previous vote if exists
+      if (existingVote === 'upvote') {
+        updatedRatings[reviewIndex].upvotes--;
+      } else if (existingVote === 'downvote') {
+        updatedRatings[reviewIndex].downvotes--;
+      }
+
+      // Apply new vote
+      if (existingVote !== voteType) {
+        if (voteType === 'upvote') {
+          updatedRatings[reviewIndex].upvotes++;
+        } else {
+          updatedRatings[reviewIndex].downvotes++;
+        }
+        localStorage.setItem(voteKey, voteType);
+      } else {
+        // If clicking the same vote again, remove it
+        localStorage.removeItem(voteKey);
+      }
+
+      localStorage.setItem(ratingsKey, JSON.stringify(updatedRatings));
+      setUserRatings(updatedRatings);
+    } catch (error) {
+      console.error("Error voting:", error);
+    }
+  };
+
+  const getUserVote = (reviewId) => {
+    if (!session) return null;
+    const voteKey = `votes_${session.user.id}_${reviewId}`;
+    return localStorage.getItem(voteKey);
+  };
+
+  const averageRating = userRatings.length > 0 
+    ? (userRatings.reduce((sum, r) => sum + r.rating, 0) / userRatings.length)
+    : 0;
+
+  const userHasRated = userRatings.some(r => r.userId === session?.user.id);
 
   return (
     <>
@@ -247,10 +290,8 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                   )}
 
                   <div className="mt-6">
-                    <p className="text-lg font-semibold mb-3">
-                      Ratings & Reviews
-                    </p>
-
+                    <p className="text-lg font-semibold mb-3">Ratings & Reviews</p>
+                    
                     <div className="mb-4">
                       <p className="text-sm text-gray-400">Average Rating</p>
                       <div className="flex items-center">
@@ -267,8 +308,7 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                           </span>
                         ))}
                         <span className="ml-2 text-sm text-gray-300">
-                          ({averageRating.toFixed(1)} from {userRatings.length}{" "}
-                          ratings)
+                          ({averageRating.toFixed(1)} from {userRatings.length} ratings)
                         </span>
                       </div>
                     </div>
@@ -277,9 +317,7 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                       <div className="bg-zinc-800 p-4 rounded-lg mb-6">
                         {userHasRated && !isEditing ? (
                           <div>
-                            <h4 className="text-md font-medium mb-3">
-                              Your Rating
-                            </h4>
+                            <h4 className="text-md font-medium mb-3">Your Rating</h4>
                             <div className="flex items-center mb-3">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <span
@@ -295,9 +333,7 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                               ))}
                             </div>
                             {userReview && (
-                              <p className="text-sm text-gray-300 mb-3">
-                                {userReview}
-                              </p>
+                              <p className="text-sm text-gray-300 mb-3">{userReview}</p>
                             )}
                             <div className="flex gap-2">
                               <button
@@ -317,9 +353,7 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                         ) : (
                           <div>
                             <h4 className="text-md font-medium mb-3">
-                              {userHasRated
-                                ? "Edit Your Rating"
-                                : "Rate This Movie"}
+                              {userHasRated ? "Edit Your Rating" : "Rate This Movie"}
                             </h4>
                             <div className="flex items-center mb-3">
                               {[1, 2, 3, 4, 5].map((star) => (
@@ -372,40 +406,85 @@ const MovieCard = ({ movie, onSave, onWatched, session }) => {
                     {userRatings.length > 0 && (
                       <div className="space-y-4">
                         <h4 className="text-md font-medium">User Reviews</h4>
-                        {userRatings.map((rating, index) => (
-                          <div
-                            key={index}
-                            className="bg-zinc-800 p-3 rounded-lg"
-                          >
-                            <div className="flex justify-between items-center mb-2">
-                              <p className="font-medium text-sm">
-                                {rating.userName || "Anonymous"}
-                              </p>
-                              <div className="flex">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <span
-                                    key={star}
-                                    className={`text-sm ${
-                                      star <= rating.rating
-                                        ? "text-yellow-400"
-                                        : "text-gray-500"
+                        {userRatings.map((rating) => {
+                          const userVote = getUserVote(rating.id);
+                          return (
+                            <div key={rating.id} className="bg-zinc-800 p-3 rounded-lg">
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="font-medium text-sm">
+                                  {rating.userName || "Anonymous"}
+                                </p>
+                                <div className="flex">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <span
+                                      key={star}
+                                      className={`text-sm ${
+                                        star <= rating.rating
+                                          ? "text-yellow-400"
+                                          : "text-gray-500"
+                                      }`}
+                                    >
+                                      ★
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              {rating.review && (
+                                <p className="text-sm text-gray-300 mb-3">{rating.review}</p>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleVote(rating.id, 'upvote')}
+                                    className={`flex items-center gap-1 text-xs ${
+                                      userVote === 'upvote' ? 'text-green-400' : 'text-gray-400'
                                     }`}
+                                    disabled={!session}
                                   >
-                                    ★
-                                  </span>
-                                ))}
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                    {rating.upvotes}
+                                  </button>
+                                  <span className="text-gray-500 mx-1">|</span>
+                                  <button
+                                    onClick={() => handleVote(rating.id, 'downvote')}
+                                    className={`flex items-center gap-1 text-xs ${
+                                      userVote === 'downvote' ? 'text-red-400' : 'text-gray-400'
+                                    }`}
+                                    disabled={!session}
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                    {rating.downvotes}
+                                  </button>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(rating.date).toLocaleDateString()}
+                                </p>
                               </div>
                             </div>
-                            {rating.review && (
-                              <p className="text-sm text-gray-300">
-                                {rating.review}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              {new Date(rating.date).toLocaleDateString()}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
