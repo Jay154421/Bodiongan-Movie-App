@@ -31,7 +31,7 @@ const SearchBar = () => {
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-[#00BFFF] text-white rounded-lg hover:bg-[#009acd] transition"
+          className="px-4 py-2 bg-[#FF5733] text-white rounded-lg hover:bg-[#c44427] transition"
         >
           Search
         </button>
