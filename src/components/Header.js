@@ -61,7 +61,7 @@ function Header({ onSignOut, session }) {
       <header className="bg-gradient-to-r from-black to-zinc-900 rounded-md text-sm font-medium transition-all border border-gray-700 py-4 px-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-[#00BFFF] to-[#FF5733] bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-extrabold bg-[#dbd7d6] bg-clip-text text-transparent">
               Watchly
             </h1>
           </div>
